@@ -7,6 +7,7 @@ import (
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
 	"strings"
+	"encoding/json"
 )
 
 // tomclConfing struct
@@ -24,6 +25,14 @@ type tomlConfig struct {
 	} `toml:"jira"`
 }
 
+// Matrix message struct
+type matrixmessage struct {
+	Msgtype       string `json:"msgtype"`
+	Body          string `json:"body"`
+	FormattedBody string `json:"formatted_body"`
+	Format        string `json:"format"`
+}
+
 func main() {
 	// Parse toml config
 	var config tomlConfig
@@ -31,7 +40,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
 
 	// Login to Matrix server
 	fmt.Printf("Connecting %+v to %+v\n", config.Server.Username, config.Server.Hostname)
@@ -78,13 +86,22 @@ func main() {
 		if strings.Contains(msg, "!jira") {
 			jiraparam := strings.Fields(msg)
 
+			// Show Jira Ticket
 			if jiraparam[1] == "show" {
 				issue, _, err := jiraClient.Issue.Get(jiraparam[2], nil)
 				if err != nil {
-					panic(err)
+					cli.SendText(ev.RoomID, "Sorry, there is no such Ticket...") // Received 404
+				} else {
+					// Create JSON from matrixmessage struct
+					output := matrixmessage{"m.text", fmt.Sprintf("%s:\n%+v", issue.Key, issue.Fields.Summary), fmt.Sprintf("<code><pre>%s:\n%+v</code></pre>", issue.Key, issue.Fields.Summary),"org.matrix.custom.html"}
+					jsondata, err := json.Marshal(output)
+					if err != nil {
+						panic(err)
+					}
+
+					// Send the message JSON
+					cli.SendMessageEvent(ev.RoomID,"m.room.message", jsondata)
 				}
-				fmt.Println("Parsing Jira ticket: ", jiraparam[2])
-				fmt.Printf("%s: %+v\n", issue.Key, issue.Fields.Summary)
 			}
 
 
