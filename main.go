@@ -7,7 +7,6 @@ import (
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
 	"strings"
-	"encoding/json"
 )
 
 // tomclConfing struct
@@ -23,14 +22,6 @@ type tomlConfig struct {
 		Username string `toml:"username"`
 		Password string `toml:"password"`
 	} `toml:"jira"`
-}
-
-// Matrix message struct
-type matrixmessage struct {
-	Msgtype       string `json:"msgtype"`
-	Body          string `json:"body"`
-	FormattedBody string `json:"formatted_body"`
-	Format        string `json:"format"`
 }
 
 func main() {
@@ -93,14 +84,10 @@ func main() {
 					cli.SendText(ev.RoomID, "Sorry, there is no such Ticket...") // Received 404
 				} else {
 					// Create JSON from matrixmessage struct
-					output := matrixmessage{"m.text", fmt.Sprintf("%s:\n%+v", issue.Key, issue.Fields.Summary), fmt.Sprintf("<code><pre>%s:\n%+v</code></pre>", issue.Key, issue.Fields.Summary),"org.matrix.custom.html"}
-					jsondata, err := json.Marshal(output)
-					if err != nil {
-						panic(err)
-					}
+					output := gomatrix.HTMLMessage{ fmt.Sprintf("%s:\n%+v", issue.Key, issue.Fields.Summary), "m.text", "org.matrix.custom.html", fmt.Sprintf("%s:\n<code><pre>%+v</code></pre>", issue.Key, issue.Fields.Summary)}
 
 					// Send the message JSON
-					cli.SendMessageEvent(ev.RoomID,"m.room.message", jsondata)
+					cli.SendMessageEvent(ev.RoomID,"m.room.message", output)
 				}
 			}
 
