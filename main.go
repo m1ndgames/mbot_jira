@@ -3,10 +3,13 @@ package main
 // Imports
 import (
 	"fmt"
+	"strings"
+	"log"
+	"os"
+
 	"github.com/BurntSushi/toml"
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
-	"strings"
 )
 
 // tomclConfing struct
@@ -25,6 +28,16 @@ type tomlConfig struct {
 }
 
 func main() {
+	// Open logfile
+	logfile, err := os.OpenFile("mbot_jira.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set log output to file
+	log.SetOutput(logfile)
+	log.Println("Starting mbot_jira")
+
 	// Parse toml config
 	var config tomlConfig
 	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
@@ -33,8 +46,6 @@ func main() {
 	}
 
 	// Login to Matrix server
-	fmt.Printf("Connecting %+v to %+v\n", config.Server.Username, config.Server.Hostname)
-
 	cli, _ := gomatrix.NewClient(config.Server.Hostname, "", "")
 
 	resp, err := cli.Login(&gomatrix.ReqLogin{
@@ -44,30 +55,34 @@ func main() {
 	})
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	} else {
+		log.Println(fmt.Sprintf("Successfully logged in to %+v", config.Server.Hostname))
 	}
 
 	cli.SetCredentials(resp.UserID, resp.AccessToken)
 
 	// Login to Jira
-	fmt.Printf("Connecting %+v to %+v\n", config.Jira.Username, config.Jira.Hostname)
-
 	jiraClient, err := jira.NewClient(nil, config.Jira.Hostname)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	res, err := jiraClient.Authentication.AcquireSessionCookie(config.Jira.Username, config.Jira.Password)
 	if err != nil || res == false {
 		fmt.Printf("Result: %v\n", res)
-		panic(err)
+		log.Fatal(err)
+	} else {
+		log.Println(fmt.Sprintf("Successfully logged in to %+v", config.Jira.Hostname))
 	}
 
 
 	// Join matrix rooms
 	for _, room := range config.Server.Rooms {
 		if _, err := cli.JoinRoom(room, config.Server.Hostname, nil); err != nil {
-			panic(err)
+			log.Fatal(err)
+		} else {
+			log.Println(fmt.Sprintf("Successfully joined room %+v", room))
 		}
 	}
 
@@ -96,7 +111,7 @@ func main() {
 	})
 
 	if err := cli.Sync(); err != nil {
-		fmt.Println("Sync() returned ", err)
+		log.Println(fmt.Sprintf("Sync() returned %v", err))
 	}
 
 }
