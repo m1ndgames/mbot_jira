@@ -10,6 +10,9 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
+	"io/ioutil"
+	"path/filepath"
+	"bufio"
 )
 
 // tomclConfing struct
@@ -18,7 +21,6 @@ type tomlConfig struct {
 		Hostname string `toml:"hostname"`
 		Username string `toml:"username"`
 		Password string `toml:"password"`
-		Rooms []string `toml:"rooms"`
 	} `toml:"server"`
 	Jira struct {
 		Hostname string `toml:"hostname"`
@@ -28,20 +30,32 @@ type tomlConfig struct {
 }
 
 func main() {
-	// Open logfile
-	logfile, err := os.OpenFile("mbot_jira.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	// Get current path
+	ex, err := os.Executable()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
+	run_directory := filepath.Dir(ex) + "/"
+	rundirectory_os_string := filepath.ToSlash(run_directory)
+	rundirectory_os_path := filepath.FromSlash(rundirectory_os_string)
+
+	// Open logfile
+	logfile, err := os.OpenFile(rundirectory_os_path + "mbot_jira.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer logfile.Close()
 
 	// Set log output to file
 	log.SetOutput(logfile)
-	log.Println("Starting mbot_jira")
+	log.Printf("Starting mbot_jira in %v", rundirectory_os_path)
+	log.Println("https://github.com/m1ndgames/mbot_jira/")
 
 	// Parse toml config
 	var config tomlConfig
-	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
-		fmt.Println(err)
+	if _, err := toml.DecodeFile(rundirectory_os_path + "mbot_jira.toml", &config); err != nil {
+		log.Fatal(err)
 		return
 	}
 
@@ -56,6 +70,7 @@ func main() {
 
 	if err != nil {
 		log.Fatal(err)
+		return
 	} else {
 		log.Println(fmt.Sprintf("Successfully logged in to %+v", config.Server.Hostname))
 	}
@@ -66,27 +81,89 @@ func main() {
 	jiraClient, err := jira.NewClient(nil, config.Jira.Hostname)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
 	res, err := jiraClient.Authentication.AcquireSessionCookie(config.Jira.Username, config.Jira.Password)
 	if err != nil || res == false {
 		fmt.Printf("Result: %v\n", res)
 		log.Fatal(err)
+		return
 	} else {
 		log.Println(fmt.Sprintf("Successfully logged in to %+v", config.Jira.Hostname))
 	}
 
+	// Read room DB
+	roomdb, err := os.Open(rundirectory_os_path + "mbot_jira.db")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer roomdb.Close()
 
 	// Join matrix rooms
-	for _, room := range config.Server.Rooms {
-		if _, err := cli.JoinRoom(room, config.Server.Hostname, nil); err != nil {
+	scanner := bufio.NewScanner(roomdb)
+	if scanner.Scan() == false {
+		err = scanner.Err()
+		if err == nil {
+			log.Printf("No room found in %v", rundirectory_os_path + "mbot_jira.db")
+		} else {
+			log.Fatal(err)
+			return
+		}
+	} else {
+		// TODO: refactor that
+		// Join room
+		if _, err := cli.JoinRoom(scanner.Text(), "", nil); err != nil {
 			log.Fatal(err)
 		} else {
-			log.Println(fmt.Sprintf("Successfully joined room %+v", room))
+			log.Println(fmt.Sprintf("Successfully joined room %+v", scanner.Text()))
+		}
+
+		for scanner.Scan() {
+			// Join room
+			if _, err := cli.JoinRoom(scanner.Text(), "", nil); err != nil {
+				log.Fatal(err)
+			} else {
+				log.Println(fmt.Sprintf("Successfully joined room %+v", scanner.Text()))
+			}
 		}
 	}
 
+	// Create syncer
 	syncer := cli.Syncer.(*gomatrix.DefaultSyncer)
+
+	// room member events
+	syncer.OnEventType("m.room.member", func(iv *gomatrix.Event) {
+		if iv.Content["membership"] == "invite" {
+			if *iv.StateKey == config.Server.Username {
+				log.Printf("Got invite from %v to join %v\n", iv.Sender, iv.RoomID)
+
+				// Read the room db
+				b, err := ioutil.ReadFile(rundirectory_os_path + "mbot_jira.db")
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+
+				// Check if room is already in DB
+				s := string(b)
+				if strings.Contains(s, iv.RoomID) == false {
+					// Add to DB
+					fmt.Fprintf( roomdb,"%v\n", iv.RoomID)
+
+					// Join room
+					if _, err := cli.JoinRoom(iv.RoomID, "", nil); err != nil {
+						log.Fatal(err)
+					} else {
+						log.Println(fmt.Sprintf("Successfully joined room %+v", iv.RoomID))
+					}
+				}
+			}
+		}
+	})
+
+	// message events
 	syncer.OnEventType("m.room.message", func(ev *gomatrix.Event) {
 		msg, _ := ev.Body()
 		if strings.Contains(msg, "!jira") {
@@ -105,8 +182,6 @@ func main() {
 					cli.SendMessageEvent(ev.RoomID,"m.room.message", output)
 				}
 			}
-
-
 		}
 	})
 

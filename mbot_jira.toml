@@ -1,15 +1,11 @@
 # Matrix server configuration
 [server]
 hostname = "https://matrix.server.net"
-username = "mBot"
+username = "@JiraBot:matrix.server.net"
 password = "password"
-rooms = [
-  "#Admins:matrix.server.net",
-  "#Lobby:matrix.server.net"
-]
 
 # Jira config
 [jira]
 hostname = "https://jira.server.net/"
-username = "ci"
+username = "jiraUser"
 password = "password"
