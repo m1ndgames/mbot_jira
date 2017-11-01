@@ -6,13 +6,13 @@ import (
 	"strings"
 	"log"
 	"os"
+	"io/ioutil"
+	"path/filepath"
+	"bufio"
 
 	"github.com/BurntSushi/toml"
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
-	"io/ioutil"
-	"path/filepath"
-	"bufio"
 )
 
 // tomclConfing struct
@@ -157,6 +157,37 @@ func main() {
 						log.Fatal(err)
 					} else {
 						log.Println(fmt.Sprintf("Successfully joined room %+v", iv.RoomID))
+					}
+				}
+			}
+		} else if iv.Content["membership"] == "leave" {
+			if *iv.StateKey == config.Server.Username {
+				log.Printf("I was kicked from %v by %v\n", iv.RoomID, iv.Sender)
+
+				// Read the room db
+				b, err := ioutil.ReadFile(rundirectory_os_path + "mbot_jira.db")
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+
+				// Check if room is already in DB
+				s := string(b)
+				if strings.Contains(s, iv.RoomID) == true {
+					lines := strings.Split(string(b), "\n")
+
+					for i, line := range lines {
+						if strings.Contains(line, iv.RoomID) {
+							lines[i] = ""
+						}
+					}
+					output := strings.Join(lines, "\n")
+					err = ioutil.WriteFile(rundirectory_os_path + "mbot_jira.db", []byte(output), 0644)
+					if err != nil {
+						log.Fatalln(err)
+						return
+					} else {
+						log.Printf("Deleted %v from room DB\n", iv.RoomID)
 					}
 				}
 			}
