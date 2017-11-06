@@ -201,7 +201,7 @@ func main() {
 					cli.SendText(ev.RoomID, "Sorry, there is no such Ticket...") // Received 404
 				} else {
 					// Create JSON from matrixmessage struct
-					output := gomatrix.HTMLMessage{ fmt.Sprintf("%s:\n%+v", issue.Key, issue.Fields.Summary), "m.text", "org.matrix.custom.html", fmt.Sprintf("%s:\n<code><pre>%+v</code></pre>", issue.Key, issue.Fields.Summary)}
+					output := gomatrix.HTMLMessage{ fmt.Sprintf("%s\nStatus: %v - Priority: %v\n%+v", issue.Key, issue.Fields.Status.Name, issue.Fields.Priority.Name, issue.Fields.Summary), "m.text", "org.matrix.custom.html", fmt.Sprintf("<a href=\"%sbrowse/%v\">%s</a>\n<br>Status: %v - Priority: %v<code><pre>%+v</code></pre><br>", config.Jira.Hostname, issue.Key, issue.Key, issue.Fields.Status.Name, issue.Fields.Priority.Name, issue.Fields.Summary)}
 
 					// Send the message JSON
 					cli.SendMessageEvent(ev.RoomID,"m.room.message", output)
