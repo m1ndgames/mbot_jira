@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"bufio"
+	"regexp"
 
 	"github.com/BurntSushi/toml"
 	"github.com/matrix-org/gomatrix"
@@ -194,7 +195,7 @@ func main() {
 		if strings.Contains(msg, "!jira") {
 			jiraparam := strings.Fields(msg)
 
-			// Show Jira Ticket
+			// Show Jira issue
 			if jiraparam[1] == "show" {
 				issue, _, err := jiraClient.Issue.Get(jiraparam[2], nil)
 				if err != nil {
@@ -206,6 +207,23 @@ func main() {
 					// Send the message JSON
 					cli.SendMessageEvent(ev.RoomID,"m.room.message", output)
 				}
+			}
+
+		} else if strings.Contains(msg, config.Jira.Hostname + "browse/") {
+			re, err := regexp.Compile(`/browse/(.+-\d+)`)
+
+			res := re.FindStringSubmatch(msg)
+			parseissue := res[1]
+
+			issue, _, err := jiraClient.Issue.Get(parseissue, nil)
+			if err != nil {
+				cli.SendText(ev.RoomID, "Sorry, there is no such Ticket...") // Received 404
+			} else {
+				// Create JSON from matrixmessage struct
+				output := gomatrix.HTMLMessage{ fmt.Sprintf("%s\nStatus: %v - Priority: %v\n%+v", issue.Key, issue.Fields.Status.Name, issue.Fields.Priority.Name, issue.Fields.Summary), "m.text", "org.matrix.custom.html", fmt.Sprintf("<a href=\"%sbrowse/%v\">%s</a>\n<br>Status: %v - Priority: %v<code><pre>%+v</code></pre><br>", config.Jira.Hostname, issue.Key, issue.Key, issue.Fields.Status.Name, issue.Fields.Priority.Name, issue.Fields.Summary)}
+
+				// Send the message JSON
+				cli.SendMessageEvent(ev.RoomID,"m.room.message", output)
 			}
 		}
 	})
