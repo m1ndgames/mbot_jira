@@ -14,6 +14,7 @@ A Matrix Chatbot that connects to Atlassian Jira
 - github.com/BurntSushi/toml
 - github.com/matrix-org/gomatrix
 - github.com/andygrunwald/go-jira
+- github.com/kardianos/osext
 
 [Matrix]:https://matrix.org
 [Jira]:https://atlassian.com/software/jira
