@@ -84,14 +84,8 @@ func main() {
 		return
 	}
 
-	res, err := jiraClient.Authentication.AcquireSessionCookie(config.Jira.Username, config.Jira.Password)
-	if err != nil || res == false {
-		fmt.Printf("Result: %v\n", res)
-		log.Fatal(err)
-		return
-	} else {
-		log.Println(fmt.Sprintf("Successfully logged in to %+v", config.Jira.Hostname))
-	}
+	// Basic auth
+	jiraClient.Authentication.SetBasicAuth(config.Jira.Username, config.Jira.Password)
 
 	// Read room DB
 	roomdb, err := os.Open(rundirectory_os_path + "mbot_jira.db")
@@ -219,5 +213,4 @@ func main() {
 	if err := cli.Sync(); err != nil {
 		log.Println(fmt.Sprintf("Sync() returned %v", err))
 	}
-
 }
