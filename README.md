@@ -5,8 +5,6 @@ mBot Jira
 [![Go Report Card](https://goreportcard.com/badge/github.com/m1ndgames/mbot_jira)](https://goreportcard.com/report/github.com/m1ndgames/mbot_jira)
 [![Chat on Matrix](https://img.shields.io/badge/chat-on%20matrix-blue.svg)](https://matrix.to/#/#mBot:m1nd.io)
 
-https://goreportcard.com/badge/github.com/m1ndgames/mbot_jira
-
 A Matrix Chatbot that connects to Atlassian Jira
 
 ### Features
