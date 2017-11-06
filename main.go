@@ -14,6 +14,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/matrix-org/gomatrix"
 	"github.com/andygrunwald/go-jira"
+	"github.com/kardianos/osext"
 )
 
 // tomclConfing struct
@@ -32,11 +33,11 @@ type tomlConfig struct {
 
 func main() {
 	// Get current path
-	ex, err := os.Executable()
+	ex, err := osext.ExecutableFolder()
 	if err != nil {
 		panic(err)
 	}
-	run_directory := filepath.Dir(ex) + "/"
+	run_directory := ex + "/"
 	rundirectory_os_string := filepath.ToSlash(run_directory)
 	rundirectory_os_path := filepath.FromSlash(rundirectory_os_string)
 
@@ -209,6 +210,7 @@ func main() {
 				}
 			}
 
+		// Automatically parse tickets when recognized
 		} else if strings.Contains(msg, config.Jira.Hostname + "browse/") {
 			re, err := regexp.Compile(`/browse/(.+-\d+)`)
 
