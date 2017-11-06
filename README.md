@@ -7,11 +7,7 @@ mBot Jira
 A Matrix Chatbot that connects to Atlassian Jira
 
 ### Features
-- Parse issue
-
-### Planned
-- Add issue
-- Assign issue
+- Issue parser
 
 ### Third party
 
