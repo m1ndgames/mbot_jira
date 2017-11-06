@@ -1,0 +1,3 @@
+Commands:
+
+!jira show <issueID>            - Parses the issue
