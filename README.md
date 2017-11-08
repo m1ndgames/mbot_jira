@@ -15,6 +15,7 @@ To add him to a channel just send it an invite. Kick it to make it leave again. 
 
 - github.com/m1ndgames/mbot_jira/
 - github.com/m1ndgames/mbot_icinga2/
+- github.com/m1ndgames/mbot_rss
 - tbc
 
 ### Third party
